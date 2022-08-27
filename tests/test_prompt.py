@@ -98,67 +98,133 @@ class TestPrompt:
         cookiecutter_dict = prompt.prompt_for_config(context)
         assert cookiecutter_dict == {'details': {'key': 'value', 'integer': 37}}
 
-    def test_should_render_dict(self):
-        """Verify template inside dictionary variable rendered."""
-        context = {
-            'cookiecutter': {
-                'project_name': 'Slartibartfast',
-                'details': {
-                    '{{cookiecutter.project_name}}': '{{cookiecutter.project_name}}'
+    @pytest.mark.parametrize(
+        "context,expected_cookiecutter_dict",
+        [
+            (
+                {
+                    'cookiecutter': {
+                        'project_name': 'Slartibartfast',
+                        'details': {
+                            '{{cookiecutter.project_name}}': '{{cookiecutter.project_name}}',
+                        },
+                    }
                 },
-            }
-        }
-
-        cookiecutter_dict = prompt.prompt_for_config(context, no_input=True)
-        assert cookiecutter_dict == {
-            'project_name': 'Slartibartfast',
-            'details': {'Slartibartfast': 'Slartibartfast'},
-        }
-
-    def test_should_render_deep_dict(self):
-        """Verify nested structures like dict in dict, rendered correctly."""
-        context = {
-            'cookiecutter': {
-                'project_name': "Slartibartfast",
-                'details': {
-                    "key": "value",
-                    "integer_key": 37,
-                    "other_name": '{{cookiecutter.project_name}}',
-                    "dict_key": {
-                        "deep_key": "deep_value",
-                        "deep_integer": 42,
-                        "deep_other_name": '{{cookiecutter.project_name}}',
-                        "deep_list": [
-                            "deep value 1",
-                            "{{cookiecutter.project_name}}",
-                            "deep value 3",
-                        ],
+                {
+                    'project_name': 'Slartibartfast',
+                    'details': {'Slartibartfast': 'Slartibartfast'},
+                },
+            ),
+            (
+                {
+                    'cookiecutter': {
+                        'project_name': "Slartibartfast",
+                        'details': {
+                            "key": "value",
+                            "integer_key": 37,
+                            "other_name": '{{cookiecutter.project_name}}',
+                            "dict_key": {
+                                "deep_key": "deep_value",
+                                "deep_integer": 42,
+                                "deep_other_name": '{{cookiecutter.project_name}}',
+                                "deep_list": [
+                                    "deep value 1",
+                                    "{{cookiecutter.project_name}}",
+                                    "deep value 3",
+                                ],
+                            },
+                            "list_key": [
+                                "value 1",
+                                "{{cookiecutter.project_name}}",
+                                "value 3",
+                            ],
+                        },
+                    }
+                },
+                {
+                    'project_name': "Slartibartfast",
+                    'details': {
+                        "key": "value",
+                        "integer_key": "37",
+                        "other_name": "Slartibartfast",
+                        "dict_key": {
+                            "deep_key": "deep_value",
+                            "deep_integer": "42",
+                            "deep_other_name": "Slartibartfast",
+                            "deep_list": [
+                                "deep value 1",
+                                "Slartibartfast",
+                                "deep value 3",
+                            ],
+                        },
+                        "list_key": ["value 1", "Slartibartfast", "value 3"],
                     },
-                    "list_key": [
-                        "value 1",
-                        "{{cookiecutter.project_name}}",
-                        "value 3",
-                    ],
                 },
-            }
-        }
-
-        cookiecutter_dict = prompt.prompt_for_config(context, no_input=True)
-        assert cookiecutter_dict == {
-            'project_name': "Slartibartfast",
-            'details': {
-                "key": "value",
-                "integer_key": "37",
-                "other_name": "Slartibartfast",
-                "dict_key": {
-                    "deep_key": "deep_value",
-                    "deep_integer": "42",
-                    "deep_other_name": "Slartibartfast",
-                    "deep_list": ["deep value 1", "Slartibartfast", "deep value 3"],
+            ),
+            (
+                {
+                    'cookiecutter': OrderedDict(
+                        [
+                            ('foo', 'Hello world'),
+                            ('bar', 123),
+                            ('rendered_foo', '{{ cookiecutter.foo|lower }}'),
+                            ('rendered_bar', 123),
+                            ('_hidden_foo', '{{ cookiecutter.foo|lower }}'),
+                            ('_hidden_bar', 123),
+                            ('__rendered_hidden_foo', '{{ cookiecutter.foo|lower }}'),
+                            ('__rendered_hidden_bar', 123),
+                        ]
+                    )
                 },
-                "list_key": ["value 1", "Slartibartfast", "value 3"],
-            },
-        }
+                OrderedDict(
+                    [
+                        ('foo', 'Hello world'),
+                        ('bar', '123'),
+                        ('rendered_foo', 'hello world'),
+                        ('rendered_bar', '123'),
+                        ('_hidden_foo', '{{ cookiecutter.foo|lower }}'),
+                        ('_hidden_bar', 123),
+                        ('__rendered_hidden_foo', 'hello world'),
+                        ('__rendered_hidden_bar', '123'),
+                    ]
+                ),
+            ),
+            (
+                {
+                    'cookiecutter': {
+                        'project_name': 'Skip render',
+                        '_skip_jinja_template': '{{cookiecutter.project_name}}',
+                        '_skip_float': 123.25,
+                        '_skip_integer': 123,
+                        '_skip_boolean': True,
+                        '_skip_nested': True,
+                    }
+                },
+                {
+                    'project_name': 'Skip render',
+                    '_skip_jinja_template': '{{cookiecutter.project_name}}',
+                    '_skip_float': 123.25,
+                    '_skip_integer': 123,
+                    '_skip_boolean': True,
+                    '_skip_nested': True,
+                },
+            ),
+        ],
+        ids=[
+            "should_render_dict",
+            "should_render_deep_dict",
+            "should_render_private_variables_with_two_underscores",
+            "should_not_render_private_variables",
+        ],
+    )
+    def test_prompt_for_config_no_input(
+        self, context: dict, expected_cookiecutter_dict: dict
+    ):
+        """Test prompt for config function with no_input with multiple configuration."""
+        assert (
+            prompt.prompt_for_config(context, no_input=True)
+            == expected_cookiecutter_dict
+        )
 
     def test_prompt_for_templated_config(self, monkeypatch):
         """Verify Jinja2 templating works in unicode prompts."""
@@ -195,61 +261,6 @@ class TestPrompt:
         context = {'cookiecutter': {'_copy_without_render': ['*.html']}}
         cookiecutter_dict = prompt.prompt_for_config(context)
         assert cookiecutter_dict == {'_copy_without_render': ['*.html']}
-
-    def test_should_render_private_variables_with_two_underscores(self):
-        """Test rendering of private variables with two underscores.
-
-        There are three cases:
-        1. Variables beginning with a single underscore are private and not rendered.
-        2. Variables beginning with a double underscore are private and are rendered.
-        3. Variables beginning with anything other than underscores are not private and
-           are rendered.
-        """
-        context = {
-            'cookiecutter': OrderedDict(
-                [
-                    ('foo', 'Hello world'),
-                    ('bar', 123),
-                    ('rendered_foo', '{{ cookiecutter.foo|lower }}'),
-                    ('rendered_bar', 123),
-                    ('_hidden_foo', '{{ cookiecutter.foo|lower }}'),
-                    ('_hidden_bar', 123),
-                    ('__rendered_hidden_foo', '{{ cookiecutter.foo|lower }}'),
-                    ('__rendered_hidden_bar', 123),
-                ]
-            )
-        }
-        cookiecutter_dict = prompt.prompt_for_config(context, no_input=True)
-        assert cookiecutter_dict == OrderedDict(
-            [
-                ('foo', 'Hello world'),
-                ('bar', '123'),
-                ('rendered_foo', 'hello world'),
-                ('rendered_bar', '123'),
-                ('_hidden_foo', '{{ cookiecutter.foo|lower }}'),
-                ('_hidden_bar', 123),
-                ('__rendered_hidden_foo', 'hello world'),
-                ('__rendered_hidden_bar', '123'),
-            ]
-        )
-
-    def test_should_not_render_private_variables(self):
-        """Verify private(underscored) variables not rendered by `prompt_for_config`.
-
-        Private variables designed to be raw, same as context input.
-        """
-        context = {
-            'cookiecutter': {
-                'project_name': 'Skip render',
-                '_skip_jinja_template': '{{cookiecutter.project_name}}',
-                '_skip_float': 123.25,
-                '_skip_integer': 123,
-                '_skip_boolean': True,
-                '_skip_nested': True,
-            }
-        }
-        cookiecutter_dict = prompt.prompt_for_config(context, no_input=True)
-        assert cookiecutter_dict == context['cookiecutter']
 
 
 class TestReadUserChoice:
