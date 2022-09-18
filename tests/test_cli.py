@@ -87,6 +87,15 @@ def test_cli_verbose(cli_runner):
 
 
 @pytest.mark.usefixtures('remove_fake_project_dir')
+def test_cli_dump_input(cli_runner):
+    """Test cli invocation display log if called with `verbose` flag."""
+    result = cli_runner('tests/fake-repo-pre/', '--no-input', '--dump-input')
+    assert result.exit_code == 0
+    assert os.path.isdir('fake-project')
+    assert os.path.isfile("fake-project/.cookiecutter.json")
+
+
+@pytest.mark.usefixtures('remove_fake_project_dir')
 def test_cli_replay(mocker, cli_runner):
     """Test cli invocation display log with `verbose` and `replay` flags."""
     mock_cookiecutter = mocker.patch('cookiecutter.cli.cookiecutter')
@@ -110,6 +119,7 @@ def test_cli_replay(mocker, cli_runner):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -137,6 +147,7 @@ def test_cli_replay_file(mocker, cli_runner):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -173,6 +184,7 @@ def test_cli_exit_on_noinput_and_replay(mocker, cli_runner):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -209,6 +221,7 @@ def test_run_cookiecutter_on_overwrite_if_exists_and_replay(
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -266,6 +279,7 @@ def test_cli_output_dir(mocker, cli_runner, output_dir_flag, output_dir):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -311,6 +325,7 @@ def test_user_config(mocker, cli_runner, user_config_path):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -342,6 +357,7 @@ def test_default_user_config_overwrite(mocker, cli_runner, user_config_path):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -368,6 +384,7 @@ def test_default_user_config(mocker, cli_runner):
         directory=None,
         accept_hooks=True,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
@@ -633,6 +650,7 @@ def test_cli_accept_hooks(
         skip_if_file_exists=False,
         accept_hooks=expected,
         keep_project_on_failure=False,
+        dump_input=False,
     )
 
 
